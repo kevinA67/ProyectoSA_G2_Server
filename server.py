@@ -75,6 +75,67 @@ def insert_usuario(sid, data):
         print(f"Error al insertar el usuario: {e}")
         sio.emit("registroRespuesta", {"success": False, "message": "Error en el servidor"}, to=sid)
 
+#Obtener usuarios
+@sio.event
+def get_usuarios(sid):
+    connDB = ConexionDB()
+    if connDB is None:
+        print("Error: No se pudo conectar a la base de datos.")
+        sio.emit("getUsuarios", {"success": False, "message": "Error en el servidor"}, to=sid)
+
+    try:
+        cursor = connDB.cursor()
+        sql = """
+            SELECT id, name, nickname, status FROM users;
+        """
+
+        cursor.execute(sql)
+        usuarios = cursor.fetchall()
+
+        usuarios_data = [
+            {"id": user[0], "name": user[1], "nickname": user[2], "status": user[3]}
+            for user in usuarios
+        ]
+
+        connDB.commit()
+        sio.emit("getUsuarios", {"success": True, "data": usuarios_data}, to=sid)
+    except Exception as e:
+        print("Error al obtener los usuarios")
+        sio.emit("getUsuarios", {"success": False, "message": "Error en el servidor"}, to=sid)
+
+#Obtener SID del diccionario de usuarios conectados
+def obtener_codigo_por_nombre(diccionario, nombre):
+    return diccionario.get(nombre, None) 
+
+#Solicitud de desafios
+@sio.event
+def desafiar(sid, desafiante ,nickname):
+    # print(usuarios_conectados)
+    # print('Hola')
+    # print(desafiante,sid)
+    codigo = obtener_codigo_por_nombre(usuarios_conectados, nickname)
+    # print(codigo)
+    sio.emit("recibirDesafios", {"success": True, "data": desafiante}, to=codigo)
+
+#Confirmacion de desafios
+@sio.event
+def confirmarDesafio(sid, confirmacion, desafiante ,nickname):
+    # print(usuarios_conectados)
+    # print('Hola')
+    # print(desafiante,sid)
+    codigo = obtener_codigo_por_nombre(usuarios_conectados, nickname)
+    # print(codigo)
+    if confirmacion:
+        sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion, "nickname": nickname}, to=codigo)
+        sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion, "nickname": nickname}, to=sid)
+        print("verdadero")
+    else: 
+        sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion}, to=codigo)
+        print("falso")
+
+   
+
+
 # Manejo del login
 @sio.event
 def login(sid, data):
