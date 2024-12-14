@@ -1,4 +1,5 @@
 import socketio
+import os
 import eventlet
 import mysql.connector
 from mysql.connector import Error
@@ -323,4 +324,6 @@ def save_result(sid, data):
 
 # Ejecutar el servidor
 if __name__ == '__main__':
-    eventlet.wsgi.server(eventlet.listen(('localhost', 5000)), app)
+    # eventlet.wsgi.server(eventlet.listen(('localhost', 5000)), app)   
+    port = int(os.environ.get("PORT", 5000))  # Usar el puerto de la variable de entorno o 5000 por defecto
+    eventlet.wsgi.server(eventlet.listen(("", port)), app)
