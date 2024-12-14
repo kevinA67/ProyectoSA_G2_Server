@@ -91,14 +91,14 @@ def get_usuarios(sid):
     try:
         cursor = connDB.cursor()
         sql = """
-            SELECT id, name, nickname, status FROM users;
+            SELECT id, name, nickname, status, s.victories  FROM users u inner join statistics s on u.id  = s.userId ;
         """
 
         cursor.execute(sql)
         usuarios = cursor.fetchall()
 
         usuarios_data = [
-            {"id": user[0], "name": user[1], "nickname": user[2], "status": user[3]}
+            {"id": user[0], "name": user[1], "nickname": user[2], "victories":user[4], "status": user[3]}
             for user in usuarios
         ]
 
@@ -198,6 +198,35 @@ def getStatistics(sid, nickname):
     except Exception as e:
         print("Error en Obtencion de estadisticas:", e)
         sio.emit("statisticsResponse", {"success": False, "message": "Error en el servidor"}, to=sid)
+
+@sio.event
+def save_result(sid, data):
+    connDB = ConexionDB()
+    if connDB is None:
+        print("Error: No se pudo conectar a la base de datos.")
+        sio.emit("SaveResult", {"success": False, "message": "Error en el servidor"}, to=sid)
+    try:
+        cursor = connDB.cursor()
+        matches = data["nickname"]
+        victories = data["password"]
+        defeats = data["defeats"]
+        score = data["score"]
+        user = data["user"]
+        sql = """
+           UPDATE statistics 
+            SET matches = matches + %s ,
+            victories = victories  + %s,
+            defeats = defeats  + %s,
+            score = score + %s 
+           WHERE userId in (select u.id from users u WHERE u.nickname = %s);
+        """
+      
+        cursor.execute(sql, (matches, victories, defeats, score,user))
+        connDB.commit()
+        sio.emit("SaveResult", {"success": True, "message": "Resultado registrado con éxito"}, to=sid)
+    except Exception as e:
+        print(f"Error al insertar el resultado de la partida: {e}")
+        sio.emit("SaveResult", {"success": False, "message": "Error en el servidor"}, to=sid)
 
 
 # Ejecutar el servidor
