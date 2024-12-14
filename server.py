@@ -38,21 +38,26 @@ def tableroServidor(sid, data):
     print(f"Usuarios conectados: {usuarios_conectados}")
     tablero = data['tablero']
     isXTurn = data['isXTurn']
+    contrincante = data['userContrincante']
+    codigo = obtener_codigo_por_nombre(usuarios_conectados, contrincante)
     print(f'Mensaje recibido: {tablero}')
     # Reenviar el mensaje a todos los clientes conectados
     #sio.send(sid, data)  # Esto envía solo al remitente
     #sio.emit('message', data)  # Esto envía a todos los clientes
-    sio.emit("tableroCliente",{"data": tablero, "turno": isXTurn}, skip_sid=sid)
+    sio.emit("tableroCliente",{"data": tablero, "turno": isXTurn}, to=codigo)
 
 
 # Manejar la recepción de mensajes
 @sio.event
 def mensaje(sid, data):
     print(f'Mensaje recibido: {data}')
+    mensaje = data['newMessage']
+    contrincante = data['userContrincante']
+    codigo = obtener_codigo_por_nombre(usuarios_conectados, contrincante)
     # Reenviar el mensaje a todos los clientes conectados
     #sio.send(sid, data)  # Esto envía solo al remitente
     #sio.emit('message', data)  # Esto envía a todos los clientes
-    sio.emit("mensajeCliente", data, skip_sid=sid)
+    sio.emit("mensajeCliente", mensaje, to=codigo)
 
 @sio.event
 def insert_usuario(sid, data):
