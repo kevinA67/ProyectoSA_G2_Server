@@ -172,6 +172,15 @@ def confirmarDesafio(sid, confirmacion, desafiante ,nickname):
         print("falso")
 
 @sio.event
+def noPlaying(sid, nickname):
+    print(f"usuario ya no esta jugando: {nickname}")
+    if nickname in usuarios_playing:
+        usuarios_playing.remove(nickname)
+        print(f"Usuario {nickname} ya no esta jugando")
+    else:
+        print(f"Usuario {nickname} no se encuentra jugando")
+
+@sio.event
 def terminarPartida(sid, nickname):
     codigo = obtener_codigo_por_nombre(usuarios_conectados, nickname)
     sio.emit("exit_game", {"success": True, "nickname": nickname}, to=codigo)
