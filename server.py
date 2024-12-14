@@ -138,9 +138,19 @@ def confirmarDesafio(sid, confirmacion, desafiante ,nickname):
         sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion}, to=codigo)
         print("falso")
 
+@sio.event
+def terminarPartida(sid, nickname):
+    codigo = obtener_codigo_por_nombre(usuarios_conectados, nickname)
+    sio.emit("exit_game", {"success": True, "nickname": nickname}, to=codigo)
+    sio.emit("exit_game", {"success": True, "nickname": nickname}, to=sid)
+
+@sio.event
+def volver_a_jugar(sid, nickname):
+    codigo = obtener_codigo_por_nombre(usuarios_conectados, nickname)
+    sio.emit("replay_game", {"success": True, "nickname": nickname}, to=codigo)
+    sio.emit("replay_game", {"success": True, "nickname": nickname}, to=sid)
+    print("volverAjugar")
    
-
-
 # Manejo del login
 @sio.event
 def login(sid, data):
@@ -207,8 +217,8 @@ def save_result(sid, data):
         sio.emit("SaveResult", {"success": False, "message": "Error en el servidor"}, to=sid)
     try:
         cursor = connDB.cursor()
-        matches = data["nickname"]
-        victories = data["password"]
+        matches = data["matches"]
+        victories = data["victories"]
         defeats = data["defeats"]
         score = data["score"]
         user = data["user"]
