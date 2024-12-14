@@ -11,6 +11,7 @@ app = socketio.WSGIApp(sio)
 
 # Diccionario para almacenar SID y nombre de usuario
 usuarios_conectados = {}
+usuarios_playing = []
 
 #Conexion a la base de datos
 def ConexionDB():
@@ -31,6 +32,34 @@ def ConexionDB():
 @sio.event
 def connect(sid, environ):
     print(f"Cliente conectado: {sid}")
+
+# Manejar la desconexión de un cliente
+@sio.event
+def disconnect(sid):
+    # Buscar el usuario desconectado por su SID
+    usuario_desconectado = None
+    for usuario, sid_actual in usuarios_conectados.items():
+        if sid_actual == sid:
+            usuario_desconectado = usuario
+            break
+
+    if usuario_desconectado:
+        # Remover el usuario desconectado del diccionario
+        del usuarios_conectados[usuario_desconectado]
+    else:
+        print(f"DESCONEXION detectada para SID no registrado: {sid}")
+
+# Manejar la reconexión del cliente
+@sio.event
+def reconnect(sid, data):
+    # Se espera que el cliente envíe su identificador (e.g., nickname)
+    nickname = data.get("nickname")
+    if nickname:
+        usuarios_conectados[nickname] = sid
+        print(f"Usuario reconectado: {nickname}")
+    else:
+        print("Reconexión detectada, pero falta el identificador del usuario.")
+
 
 # Manejar la recepción de mensajes
 @sio.event
@@ -133,9 +162,13 @@ def confirmarDesafio(sid, confirmacion, desafiante ,nickname):
     if confirmacion:
         sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion, "nickname": nickname}, to=codigo)
         sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion, "nickname": nickname}, to=sid)
+        usuarios_playing.append(nickname)
+        usuarios_playing.append(desafiante)
         print("verdadero")
     else: 
         sio.emit("confirmacionDeDesafios", {"success": True, "data": confirmacion}, to=codigo)
+        usuarios_playing.remove(nickname)
+        usuarios_playing.remove(desafiante)
         print("falso")
 
    
@@ -166,6 +199,16 @@ def login(sid, data):
     except Exception as e:
         print("Error en login:", e)
         sio.emit("loginRespuesta", {"success": False, "message": "Error en el servidor"}, to=sid)
+
+@sio.event
+def getUserConectados(sid):
+    print(f"user conectados: {usuarios_conectados}")
+    sio.emit("getUserOnlineResp", {"success": True, "data": list(usuarios_conectados.keys())}, to=sid)
+
+@sio.event
+def getUserPlaying(sid):
+    print(f"user jugandos: {usuarios_playing}")
+    sio.emit("getUserPlayingResp", {"success": True, "data": list(usuarios_playing)}, to=sid)
 
 @sio.event
 def getStatistics(sid, nickname):
