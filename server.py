@@ -162,6 +162,39 @@ def login(sid, data):
         print("Error en login:", e)
         sio.emit("loginRespuesta", {"success": False, "message": "Error en el servidor"}, to=sid)
 
+@sio.event
+def getStatistics(sid, nickname):
+    connDB = ConexionDB()
+    try:
+        cursor = connDB.cursor()
+        sql = "SELECT matches ,victories ,defeats ,score  FROM statistics s INNER JOIN users u ON s.userId = u.id WHERE u.nickname = %s;"
+        cursor.execute(sql, (nickname,))
+        resultado = cursor.fetchone()
+        if resultado:
+            statistics = {
+                "matches": resultado[0],
+                "victories": resultado[1],
+                "defeats": resultado[2],
+                "score": resultado[3]
+            }
+            sio.emit("statisticsResponse", {"success": True, "data": statistics}, to=sid)
+        else:
+            statistics = {
+                "matches": 0,
+                "victories": 0,
+                "defeats": 0,
+                "score": 0
+            }
+            sio.emit("statisticsResponse", {"success": True, "data": statistics}, to=sid)       
+
+    except KeyError as e:
+        missing_key = str(e)
+        sio.emit("statisticsResponse", {"success": False, "message": f"Falta el campo: {missing_key}"}, to=sid)
+    except Exception as e:
+        print("Error en Obtencion de estadisticas:", e)
+        sio.emit("statisticsResponse", {"success": False, "message": "Error en el servidor"}, to=sid)
+
+
 # Ejecutar el servidor
 if __name__ == '__main__':
     eventlet.wsgi.server(eventlet.listen(('localhost', 5000)), app)
