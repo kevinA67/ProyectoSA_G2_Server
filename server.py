@@ -36,6 +36,7 @@ def connect(sid, environ):
 # Manejar la desconexión de un cliente
 @sio.event
 def disconnect(sid):
+    print("Usuario Desconectado")
     # Buscar el usuario desconectado por su SID
     usuario_desconectado = None
     for usuario, sid_actual in usuarios_conectados.items():
@@ -46,6 +47,16 @@ def disconnect(sid):
     if usuario_desconectado:
         # Remover el usuario desconectado del diccionario
         del usuarios_conectados[usuario_desconectado]
+        #Enviar un mensaje a todos los clientes conectados con el codigo del cliente desconectado
+        for usuario, sid_actual in usuarios_conectados.items():
+            sio.emit(
+                'usuario_desconectado',  # Evento que recibirán los clientes
+                {
+                    'codigo_usuario': usuario_desconectado,
+                    'mensaje': f'El usuario {usuario_desconectado} se ha desconectado.'
+                },
+                to=sid_actual  # Enviar mensaje al SID específico del usuario
+            )
     else:
         print(f"DESCONEXION detectada para SID no registrado: {sid}")
 
@@ -172,10 +183,12 @@ def confirmarDesafio(sid, confirmacion, desafiante ,nickname):
         print("falso")
 
 @sio.event
-def noPlaying(sid, nickname):
+def noPlaying(sid, nickname, desafiante):
     print(f"usuario ya no esta jugando: {nickname}")
+    print(f"El desafiante: {desafiante}")
     if nickname in usuarios_playing:
         usuarios_playing.remove(nickname)
+        usuarios_playing.remove(desafiante)
         print(f"Usuario {nickname} ya no esta jugando")
     else:
         print(f"Usuario {nickname} no se encuentra jugando")
@@ -222,12 +235,16 @@ def login(sid, data):
 @sio.event
 def getUserConectados(sid):
     print(f"user conectados: {usuarios_conectados}")
-    sio.emit("getUserOnlineResp", {"success": True, "data": list(usuarios_conectados.keys())}, to=sid)
+    for usuario, sid_actual in usuarios_conectados.items():
+        sio.emit("getUserOnlineResp", {"success": True, "data": list(usuarios_conectados.keys())}, to=sid_actual)
+
+    # sio.emit("getUserOnlineResp", {"success": True, "data": list(usuarios_conectados.keys())}, to=sid)
 
 @sio.event
 def getUserPlaying(sid):
     print(f"user jugandos: {usuarios_playing}")
-    sio.emit("getUserPlayingResp", {"success": True, "data": list(usuarios_playing)}, to=sid)
+    for usuario, sid_actual in usuarios_conectados.items():
+        sio.emit("getUserPlayingResp", {"success": True, "data": list(usuarios_playing)}, to=sid_actual)
 
 @sio.event
 def getStatistics(sid, nickname):
@@ -290,6 +307,19 @@ def save_result(sid, data):
         print(f"Error al insertar el resultado de la partida: {e}")
         sio.emit("SaveResult", {"success": False, "message": "Error en el servidor"}, to=sid)
 
+# @sio.event
+# def disconnect(sid):
+#     disconnected_user = None
+#     for user, sid in usuarios_conectados.items():
+#         print("desconec", user)
+#         if sid == sid:
+#             disconnected_user = user
+#             del usuarios_conectados[user]
+#             break
+
+#     if disconnected_user:
+#         for user, sid in usuarios_conectados.items():
+#             sio.emit('opponent_disconnected', {"disconnected_user": disconnected_user}, room=sid)
 
 # Ejecutar el servidor
 if __name__ == '__main__':
